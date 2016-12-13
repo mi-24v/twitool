@@ -12,7 +12,7 @@ class TwiAuth:
 			#storeされたtoken使用
 			token = self.load_token(filename)
 			self.api = self.login_token(token)
-			if api is None:
+			if self.api is None:
 				print("invalid password. exiting...")
 				exit(0)
 		else:
@@ -73,11 +73,15 @@ class TwiAuth:
 		verify_passwd = getpass("Verify password:")
 		if passwd == verify_passwd:
 			#token,token_secのみ書き込む
-			cipher = AESCipher(generate_secret_key(passwd))
+			sec_key = generate_secret_key(passwd)
+			cipher = AESCipher(sec_key)
 			dstfile = open(filename,"w")
-			dstfile.write(cipher.encrypt(token[0]+"\n"))
-			dstfile.write(cipher.encrypt(token[1]+"\n"))
+			keyfile = open(filename+"_key","wb")
+			keyfile.write(sec_key)
+			dstfile.write(cipher.encrypt(token[0])+"\n")
+			dstfile.write(cipher.encrypt(token[1])+"\n")
 			dstfile.close()
+			keyfile.close()
 			print("Login successfly stored.")
 		else:
 			print("password mismatch!")
@@ -85,10 +89,13 @@ class TwiAuth:
 	def load_token(self,filename):
 		passwd = getpass("keyring password: ")
 		srcfile = open(filename,"r")
+		keyfile = open(filename+"_key","rb")
 		source = srcfile.readlines()
+		key_source = keyfile.readline()
 		srcfile.close()
-		source = map(lambda s: s.strip(),source)
-		cipher = AESCipher(generate_secret_key(passwd))
+		keyfile.close()
+		source = list(map(lambda s: s.strip(),source))
+		cipher = AESCipher(key_source)
 		raw_token = (cipher.decrypt(source[0]), cipher.decrypt(source[1]))
 		auth = (tweepy.OAuthHandler("XVdqky7rKjXqQejbsHJACw89Q",
 		"idXcVZAzciyVsMgjQkGqPKLNG092WoPbxVke3xYqmA1lVGm4gC"),)
