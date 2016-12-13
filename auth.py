@@ -1,6 +1,7 @@
 #-*- coding:utf-8 -*-
 import tweepy
 import os
+from getpass import getpass
 from simple_aes_cipher import AESCipher,generate_secret_key
 
 class TwiAuth:
@@ -9,22 +10,22 @@ class TwiAuth:
 		filename = "auth"
 		if os.path.isfile(filename):
 			#storeされたtoken使用
-			token = load_token(filename)
-			self.api = login_token(token)
+			token = self.load_token(filename)
+			self.api = self.login_token(token)
 			if api is None:
 				print("invalid password. exiting...")
 				exit(0)
 		else:
 			#token取得
-			token = login_redirect()
+			token = self.login_code()
 			if token != None:
 				#保存するか確認
-				ans = raw_input("Would you store login with password keyring?: ")
+				ans = input("Would you store login with password keyring?: ")
 				if ans == "y" or ans == "yes":
-					store_token(filename,token)
+					self.store_token(filename,token)
 				else:
 					pass
-				self.api = login_token(token)
+				self.api = self.login_token(token)
 			else:
 				print("Login failed. exiting...")
 				exit(0)
@@ -33,7 +34,7 @@ class TwiAuth:
 		else:
 			print("ERROR something has gone wrong.")
 			exit(1)
-	def login_pin(self):
+	def login_code(self):
 		#auth object(CONSUMER_KEY,CONSUMER_SECRETの順)
 		auth = tweepy.OAuthHandler("XVdqky7rKjXqQejbsHJACw89Q",
 		"idXcVZAzciyVsMgjQkGqPKLNG092WoPbxVke3xYqmA1lVGm4gC")
@@ -42,7 +43,7 @@ class TwiAuth:
 		#行かせる
 		print("Get your veification code from " + auth_url)
 		#codeを回収
-		auth_code = raw_input("Type the code:").strip()
+		auth_code = input("Type the code:").strip()
 		#token取得
 		try:
 			auth.get_access_token(auth_code)
@@ -55,8 +56,8 @@ class TwiAuth:
 		#auth object(CONSUMER_KEY,CONSUMER_SECRETの順)
 		auth = tweepy.OAuthHandler("XVdqky7rKjXqQejbsHJACw89Q",
 		"idXcVZAzciyVsMgjQkGqPKLNG092WoPbxVke3xYqmA1lVGm4gC")
-		#公式Snippetからすこしかりた
-		# Redirect user to Twitter to authorize
+		#公式Snippetからすこしかりた(けど、メソッド未定義でつかえない)
+		# Redirect user to Twitter to authorize -> ????
 		redirect_user(auth.get_authorization_url())
 		# Get access token
 		auth.get_access_token("verifier_value")
