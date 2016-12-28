@@ -2,6 +2,7 @@
 import auth
 import tweepy
 import csv
+import time
 
 def searchByDate(csvreader,csvfile):
 	point = []
@@ -45,6 +46,8 @@ confirm = input("ok?(y or n)")
 if confirm != "y":
 	exit(0)
 
+start_time = time.time()
+
 delete_switch = False
 deleted = []
 tried = 0
@@ -59,6 +62,7 @@ for row in csvreader:
 			result = api.destroy_status(status_id)
 		except tweepy.error.TweepError as e:
 			print(e)
+		print(str(tried)+"tried")
 		if result != "":
 			deleted.append(result)
 			print("delete SUCCESS")
@@ -67,7 +71,11 @@ for row in csvreader:
 	if row == src_start:
 		delete_switch = False
 
+csvfile.close()
+
+elapsed_time = time.time() - start_time
+
+print(("elapsed_time:{0}".format(elapsed_time)) + "[sec]")
 print("tried "+str(tried)+" tweets.")
 print("complited "+str(len(deleted))+" tweets.")
-csvfile.close()
 
