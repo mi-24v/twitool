@@ -44,3 +44,30 @@ print(src_end)
 confirm = input("ok?(y or n)")
 if confirm != "y":
 	exit(0)
+
+delete_switch = False
+deleted = []
+tried = 0
+for row in csvreader:
+	if row == src_end:
+		delete_switch = True
+	if delete_switch:
+		status_id = row["tweet_id"]
+		result = ""
+		tried += 1
+		try:
+			result = api.destroy_status(status_id)
+		except tweepy.error.TweepError as e:
+			print(e)
+		if result != "":
+			deleted.append(result)
+			print("delete SUCCESS")
+		else:
+			print("delete FAILED")
+	if row == src_start:
+		delete_switch = False
+
+print("tried "+str(tried)+" tweets.")
+print("complited "+str(len(deleted))+" tweets.")
+csvfile.close()
+
