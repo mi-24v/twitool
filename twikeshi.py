@@ -2,7 +2,7 @@
 import auth
 import tweepy
 import csv
-import time
+import time,sys
 
 def searchByDate(csvreader,csvfile):
 	point = []
@@ -23,6 +23,22 @@ def searchByDate(csvreader,csvfile):
 		csvfile.seek(0)
 	return point_start
 
+def try_delete(tweet_id):
+	deleted = ""
+	result = ""
+	try:
+		result = api.destroy_status(status_id)
+	except tweepy.error.TweepError as e:
+		deleted += str(e)
+	if result != "":
+		deleted += str(result)
+		print("[ \033[32mSUCCESS\033[0m ]", "\r", end="")
+		#if len(sys.argv) >= 2 and sys.argv[1] == "-v": print(deleted, "\r", end="")
+		return True
+	else:
+		print("[ \033[31mFAILED\033[0m ]", end="")
+		print(deleted, "\r", end="")
+		return False
 
 twiauth = auth.TwiAuth()
 twiauth.authpass()
@@ -40,42 +56,40 @@ src_start = searchByDate(csvreader,csvfile)
 print("next, please setup end tweet.")
 src_end = searchByDate(csvreader,csvfile)
 
+print("searching...")
 print(src_start)
 print(src_end)
-confirm = input("ok?(y or n)")
-if confirm != "y":
-	exit(0)
-
-start_time = time.time()
 
 delete_switch = False
-deleted = []
-tried = 0
+delete_list = []
 for row in csvreader:
 	if row == src_end:
 		delete_switch = True
 	if delete_switch:
 		status_id = row["tweet_id"]
-		result = ""
-		tried += 1
-		try:
-			result = api.destroy_status(status_id)
-		except tweepy.error.TweepError as e:
-			print(e)
-		print(str(tried)+"tried")
-		if result != "":
-			deleted.append(result)
-			print("delete SUCCESS")
-		else:
-			print("delete FAILED")
+		delete_list.append(status_id)
 	if row == src_start:
 		delete_switch = False
 
+confirm = input("ok?(y or n)")
+if confirm != "y":
+	exit(0)
+print("closing csv file...", end="")
 csvfile.close()
+print("[ \033[32mOK\033[0m ]")
+
+start_time = time.time()
+
+tried = 0
+succeed = 0
+for target in delete_list:
+	print("["+str(tried)+"]trying...", end="")
+	succeed += 1 if try_delete(target) else 0
+	tried += 1
 
 elapsed_time = time.time() - start_time
 
 print(("elapsed_time:{0}".format(elapsed_time)) + "[sec]")
 print("tried "+str(tried)+" tweets.")
-print("complited "+str(len(deleted))+" tweets.")
+print("complited "+str(succeed)+" tweets.")
 
