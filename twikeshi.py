@@ -1,64 +1,89 @@
-#-*- coding:utf-8 -*-
+# -*- coding:utf-8 -*-
 import auth
 import tweepy
 import csv
-import time,sys
+import time,sys,argparse
 
-def searchByDate(csvreader,csvfile):
+# CMD args parser
+parser = argparse.ArgumentParser(description="Deltete tweet from tweets\' csv.")
+parser.add_argument("-v", "--verbose", \
+		action="store_true", \
+		default=False, \
+		help="verbosity output.")
+parser.add_argument("--protect-media",action="store_true",default=False ,help="protect media tweets from deleting.")
+
+args = parser.parse_args()
+PROTECT_MEDIA = args.protect_media
+VERBOSE_MODE = args.verbose
+
+# Method defenition
+
+
+def searchByDate(csvreader, csvfile):
 	point = []
 	point_start = None
-	while point_start == None:
+	while point_start is None:
 		point = []
 		datestr = input("Date?(YYYY-MM-DD):")
 		timestr = input("Time?(hh:mm:ss):")
-		query = datestr+" "+timestr+" +0000"
+		query = datestr + " " + timestr + " +0000"
 		for row in csvreader:
 			if row["timestamp"] == query:
 				point.append(row)
-		print("result:"+str(len(point)))
+		print("result:" + str(len(point)))
 		print(point)
-		index = input("which one?(0-"+str(len(point))+" or no to continue):")
+		index = input("which one?(0-" + str(len(point)) + " or no to continue):")
 		if index.isdigit() and 0 <= int(index) < len(point):
 			point_start = point[int(index)]
 		csvfile.seek(0)
 	return point_start
 
+
 def try_delete(tweet_id):
 	deleted = ""
 	result = ""
 	try:
-		result = api.destroy_status(status_id)
+		status = api.get_status(tweet_id)
+		if PROTECT_MEDIA and hasattr(status, "extended_entities"):
+			print("[ \033[33mPROTECTED\033[0m ]", "\r")
+			return False
+		result = api.destroy_status(tweet_id)
 	except tweepy.error.TweepError as e:
 		deleted += str(e)
 	if result != "":
 		deleted += str(result)
-		print("[ \033[32mSUCCESS\033[0m ]", "\r", end="")
-		#if len(sys.argv) >= 2 and sys.argv[1] == "-v": print(deleted, "\r", end="")
+		if VERBOSE_MODE:
+			print("[ \033[32mSUCCESS\033[0m ]", end="")
+			print(deleted, "\r", end="")
+		else:
+			print("[ \033[32mSUCCESS\033[0m ]", "\r", end="")
 		return True
 	else:
 		print("[ \033[31mFAILED\033[0m ]", end="")
 		print(deleted, "\r", end="")
 		return False
 
+# Main code
+
 twiauth = auth.TwiAuth()
 twiauth.authpass()
 api = twiauth.api
 
 filepath = input("Tell me tweet history file. :")
-csvfile = open(filepath,"r")
+csvfile = open(filepath, "r")
 csvreader = csv.DictReader(csvfile)
 
-if csvfile != None:
+if csvfile is not None:
 	print("successfly loaded.")
 
 print("please setup start tweet.")
-src_start = searchByDate(csvreader,csvfile)
+src_start = searchByDate(csvreader, csvfile)
 print("next, please setup end tweet.")
-src_end = searchByDate(csvreader,csvfile)
+src_end = searchByDate(csvreader, csvfile)
 
 print("searching...")
-print(src_start)
-print(src_end)
+# print(src_start)
+# print(src_end)
 
 delete_switch = False
 delete_list = []
@@ -71,6 +96,7 @@ for row in csvreader:
 	if row == src_start:
 		delete_switch = False
 
+print(str(len(delete_list)) + "tweets will be deleted(if it exists and non-protected).")
 confirm = input("ok?(y or n)")
 if confirm != "y":
 	exit(0)
@@ -83,13 +109,16 @@ start_time = time.time()
 tried = 0
 succeed = 0
 for target in delete_list:
-	print("["+str(tried)+"]trying...", end="")
-	succeed += 1 if try_delete(target) else 0
+	if VERBOSE_MODE:
+		print("status id: " + target)
+	print("[" + str(tried) + "]trying...", end="")
+	result = try_delete(target)
+	if result:
+		succeed += 1
 	tried += 1
 
 elapsed_time = time.time() - start_time
 
 print(("elapsed_time:{0}".format(elapsed_time)) + "[sec]")
-print("tried "+str(tried)+" tweets.")
-print("complited "+str(succeed)+" tweets.")
-
+print("tried " + str(tried) + " tweets.")
+print("complited " + str(succeed) + " tweets.")
